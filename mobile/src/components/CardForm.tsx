@@ -1,80 +1,113 @@
-import React, { useMemo } from "react";
-import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+import React, { useState, useEffect } from "react";
+import {
+  CardElement,
+  useStripe,
+  useElements
+} from "@stripe/react-stripe-js";
 
-import useResponsiveFontSize from "./useResponsiveFontSize";
-
-const useOptions = () => {
-  const fontSize = useResponsiveFontSize();
-  const options = useMemo(
-    () => ({
-      style: {
-        base: {
-          fontSize,
-          color: "#424770",
-          letterSpacing: "0.025em",
-          fontFamily: "Source Code Pro, monospace",
-          "::placeholder": {
-            color: "#aab7c4"
-          }
-        },
-        invalid: {
-          color: "#9e2146"
-        }
-      }
-    }),
-    [fontSize]
-  );
-
-  return options;
-};
-
-const CardForm = () => {
+export default function CheckoutForm() {
+  const [succeeded, setSucceeded] = useState<any>(false);
+  const [error, setError] = useState<any>(null);
+  const [processing, setProcessing] = useState<any>('');
+  const [disabled, setDisabled] = useState<any>(true);
+  const [clientSecret, setClientSecret] = useState<any>('');
   const stripe:any = useStripe();
   const elements:any = useElements();
-  const options:any = useOptions();
 
-  const handleSubmit = async (event:any) => {
-    event.preventDefault();
+  useEffect(() => {
+    // Create PaymentIntent as soon as the page loads
+    window
+      .fetch("http://localhost:3010/gateway/stripe/payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({items: [{ id: "xl-tshirt" }]})
+      })
+      .then(res => {
+        return res.json();
+      })
+      .then(data => {
+        setClientSecret(data.clientSecret);
+      });
+  }, []);
 
-    if (!stripe || !elements) {
-      // Stripe.js has not loaded yet. Make sure to disable
-      // form submission until Stripe.js has loaded.
-      return;
+  const cardStyle = {
+    style: {
+      base: {
+        color: "#32325d",
+        fontFamily: 'Arial, sans-serif',
+        fontSmoothing: "antialiased",
+        fontSize: "16px",
+        "::placeholder": {
+          color: "#32325d"
+        }
+      },
+      invalid: {
+        color: "#fa755a",
+        iconColor: "#fa755a"
+      }
     }
+  };
 
-    const payload = await stripe.createPaymentMethod({
-      type: "card",
-      card: elements.getElement(CardElement)
+  const handleChange = async (event:any) => {
+    // Listen for changes in the CardElement
+    // and display any errors as the customer types their card details
+    setDisabled(event.empty);
+    setError(event.error ? event.error.message : "");
+  };
+
+  const handleSubmit = async (ev:any) => {
+    ev.preventDefault();
+    setProcessing(true);
+
+    const payload = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: elements.getElement(CardElement)
+      }
     });
 
-    console.log("[PaymentMethod]", payload);
+    if (payload.error) {
+      setError(`Payment failed ${payload.error.message}`);
+      setProcessing(false);
+    } else {
+      setError(null);
+      setProcessing(false);
+      setSucceeded(true);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label>
-        Card details
-        <CardElement
-          options={options}
-          onReady={() => {
-            console.log("CardElement [ready]");
-          }}
-          onChange={event => {
-            console.log("CardElement [change]", event);
-          }}
-          onBlur={() => {
-            console.log("CardElement [blur]");
-          }}
-          onFocus={() => {
-            console.log("CardElement [focus]");
-          }}
-        />
-      </label>
-      <button type="submit" disabled={!stripe}>
-        Realizar pagamento
+    <form id="payment-form" onSubmit={handleSubmit}>
+      <CardElement id="card-element" options={cardStyle} onChange={handleChange} />
+      <button
+        disabled={processing || disabled || succeeded}
+        id="submit"
+      >
+        <span id="button-text">
+          {processing ? (
+            <div className="spinner" id="spinner"></div>
+          ) : (
+            "Pay now"
+          )}
+        </span>
       </button>
+      {/* Show any error that happens when processing the payment */}
+      {error && (
+        <div className="card-error" role="alert">
+          {error}
+        </div>
+      )}
+      {/* Show a success message upon completion */}
+      <p className={succeeded ? "result-message" : "result-message hidden"}>
+        Payment succeeded, see the result in your
+        <a
+          href={`https://dashboard.stripe.com/test/payments`}
+        >
+          {" "}
+          Stripe dashboard.
+        </a> Refresh the page to pay again.
+      </p>
     </form>
   );
-};
-
-export default CardForm;
+}

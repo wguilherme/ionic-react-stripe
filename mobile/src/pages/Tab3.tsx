@@ -1,5 +1,5 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
-// import './Tab3.css';
+import { IonContent, IonHeader, IonPage, IonRow, IonTitle, IonToolbar } from '@ionic/react';
+import './Tab3.css';
 
 // stripe
 import {loadStripe} from '@stripe/stripe-js';
@@ -10,6 +10,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import React from 'react';
 
 const CheckoutForm = () => {
   const stripe:any = useStripe();
@@ -18,9 +19,13 @@ const CheckoutForm = () => {
 
 
   return (
+      <IonRow style={{height: '100%'}} className="ion-justify-content-center ion-align-items-center">
+
       <Elements stripe={stripePromise}>
         <CardForm/>
       </Elements>
+      </IonRow>
+
   );
 };
 
