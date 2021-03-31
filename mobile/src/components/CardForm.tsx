@@ -71,7 +71,7 @@ const CardForm = () => {
         />
       </label>
       <button type="submit" disabled={!stripe}>
-        Pay
+        Realizar pagamento
       </button>
     </form>
   );

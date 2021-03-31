@@ -3,6 +3,7 @@ import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/rea
 
 // stripe
 import {loadStripe} from '@stripe/stripe-js';
+import CardForm from '../components/CardForm';
 import {
   CardElement,
   Elements,
@@ -14,21 +15,12 @@ const CheckoutForm = () => {
   const stripe:any = useStripe();
   const elements:any = useElements();
 
-  const handleSubmit = async (event:any) => {
-    event.preventDefault();
-    const {error, paymentMethod} = await stripe.createPaymentMethod({
-      type: 'card',
-      card: elements.getElement(CardElement),
-    });
-  };
+
 
   return (
-    <form onSubmit={handleSubmit}>
-      <CardElement />
-      <button type="submit" disabled={!stripe}>
-          Realizar Pagamento
-      </button>
-    </form>
+      <Elements stripe={stripePromise}>
+        <CardForm/>
+      </Elements>
   );
 };
 
